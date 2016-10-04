@@ -134,6 +134,13 @@ milliseconds.
           type: Boolean,
           value: false
         }
+
+        /**
+         * Fired before path, query, hash are updated. Can be canceled.
+         *
+         * @event before-location-changed
+         */
+
       },
       hostAttributes: {
         hidden: true
@@ -169,12 +176,28 @@ milliseconds.
         //
         // i.e. without _dontUpdateUrl we'd overwrite the new path with the old
         // one when we set this.hash. Likewise for query.
-        this._dontUpdateUrl = true;
-        this._hashChanged();
-        this.path = window.decodeURIComponent(window.location.pathname);
-        this.query = window.location.search.substring(1);
-        this._dontUpdateUrl = false;
-        this._updateUrl();
+        if (this._skipUrlChanged){
+          this._skipUrlChanged=false;
+          //reset values in case they triggered the initial url change.
+          this._hashChanged();
+          this.path = window.decodeURIComponent(window.location.pathname);
+          this.query = window.decodeURIComponent(
+              window.location.search.substring(1));
+          return;
+        }
+        if (!this.fire("before-location-changed",{},{cancelable:true}).defaultPrevented){
+          this._dontUpdateUrl = true;
+          this._hashChanged();
+          this.path = window.decodeURIComponent(window.location.pathname);
+          this.query = window.decodeURIComponent(
+              window.location.search.substring(1));
+          this._dontUpdateUrl = false;
+          this._updateUrl();
+        }
+        else{
+          this._skipUrlChanged = true;
+          window.history.back();
+        }
       },
       _getUrl: function() {
         var partiallyEncodedPath = window.encodeURI(
